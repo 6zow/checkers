@@ -1,0 +1,15 @@
+
+body{
+	padding:20px;
+}
+#checkers{
+	width: 850px;
+	margin: 10px auto;
+}
+.cell{
+	border:1px solid;
+	width: 100px;
+	height:100px;
+	margin:1px;
+	float:left;
+}

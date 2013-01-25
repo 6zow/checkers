@@ -16,3 +16,10 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
 	function doSend(message) { writeToScreen("SENT: " + message);  websocket.send(message); }
 	function writeToScreen(message) { var pre = document.createElement("p"); pre.style.wordWrap = "break-word"; pre.innerHTML = message; output.appendChild(pre); }
 	window.addEventListener("load", init, false);
+
+
+$(document).ready(function(){
+
+	//$("#checkers").html("TEST");
+
+});
