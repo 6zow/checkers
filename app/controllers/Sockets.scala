@@ -2,7 +2,8 @@ package controllers
 
 import play.api.mvc.WebSocket
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import concurrent.Future
+import concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 /**
  * @author Max Gorbunov
