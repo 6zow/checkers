@@ -67,4 +67,14 @@ $(document).ready(function(){
 		col++;
 	}
 
+
+	//add drag/drop
+	$( ".piece" ).draggable();
+    $( ".piece" ).droppable({
+      drop: function( event, ui ) {
+        console.log("dropped!");
+          
+      }
+    });
+
 });
