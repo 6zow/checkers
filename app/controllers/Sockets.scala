@@ -2,8 +2,8 @@ package controllers
 
 import play.api.mvc.WebSocket
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import concurrent.{ExecutionContext, Future}
-import ExecutionContext.Implicits.global
+import concurrent.Future
+import concurrent.ExecutionContext.Implicits.global
 
 /**
  * @author Max Gorbunov
@@ -11,28 +11,40 @@ import ExecutionContext.Implicits.global
 object Sockets {
   @volatile
   var events = List[String]()
+  var sync = new Object
 
   def index = WebSocket.using[String] {
     request =>
-      var count = events.length
+      @volatile
+      var connected = true
 
       // Log events to the console
       val in = Iteratee.foreach[String] {
         s =>
           println(s"Received: $s")
           events = s :: events
+          sync.synchronized {
+            sync.notifyAll()
+          }
       }.mapDone {
         _ =>
           println("Disconnected")
+          connected = false
+          sync.synchronized {
+            sync.notifyAll()
+          }
       }
 
       // Send a single 'Hello!' message
       val out = Enumerator.generateM(Future {
-        while (count == events.length) {
-          Thread.sleep(1000)
+        sync.synchronized {
+          sync.wait()
         }
-        count = events.length
-        Some(events.head)
+        if (connected) {
+          Some(events.head)
+        } else {
+          None
+        }
       })
 
       (in, out)
