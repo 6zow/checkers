@@ -1,4 +1,4 @@
-var wsUri = "ws://172.24.38.8:9000/sockets";
+var wsUri = "ws://" + document.location.host + "/sockets";
 var output;
 
 
@@ -36,20 +36,17 @@ $(document).ready(function(){
 
 	//$("#checkers").html("TEST");
 	$(".cell").each(function(index){
-		$(this).attr("id",columns[colNumber]+vRow);
-		if(index % 7 == 0){
-			vRow++;
-			colNumber = 0;
-		}
 
 		//console.log(index);
-		if(index % 8 == 0) cols = cols == 0 ? 1 : 0;
-		if(index % 2 == 0 && cols == 0){
+		if(index % 8 == 0) {
+            colNumber = 0;
+            vRow++;
+        }
+        $(this).attr("id", columns[colNumber] + (9 - vRow));
+		if((colNumber + vRow) % 2 == 1) {
 			$(this).css("background-color","#333333");
 		}
-		if(index % 2 == 1 && cols == 1){
-			$(this).css("background-color","#333333");
-		}
+        colNumber++;
 	});
 
 	$(".cell").bind("click",function(){
@@ -63,13 +60,12 @@ $(document).ready(function(){
 	//add pieces
 	for(var i=0; i < 24; i++){
 		if(i < 12){
-			$("body").append("<div id='p"+i+"' class='piece red'></div>");
+			$("#checkers").append("<div id='p"+i+"' class='piece red'></div>");
 		}
 		else{
-			$("body").append("<div id='p"+i+"' class='piece blk'></div>");
+			$("#checkers").append("<div id='p"+i+"' class='piece blk'></div>");
 		}
 	}
-	var topLeft = $("#checkers").offset();
 	var t = 0, l = 0, row = 0,col=0;
 	for(var i=0; i < 24; i++){
 		if(i % 4 == 0 && i > 0){
@@ -77,11 +73,11 @@ $(document).ready(function(){
 			col = 0;
 		}
 
-		t = topLeft.top + (row*100) + (row*4);
+		t = row * 104;
 
-		l = topLeft.left+(col*200)+(col*4);
-		l = row % 2 == 0 ? l+100 : l;
-		var obj = {top:t,left:l}
+		l = col * 208;
+		l = row % 2 == 0 ? l + 104 : l;
+		var obj = {top: t, left: l};
 		$("#p"+i).css(obj);
 		col++;
 	}
@@ -89,23 +85,26 @@ $(document).ready(function(){
 
 	//add drag/drop
 	$( ".piece" ).draggable({
-		start:function(e,ui){
-			console.log($(this).attr("id"));
-			var _this =this;
-			iid = setInterval(function(){
-				doSend(JSON.stringify({id:$(_this).attr("id"),offset:$(_this).offset()}));
-			},250)
-		},
-		stop:function(e,ui){
-			console.log("stopped");
-			clearInterval(iid);
-		}
+//		start:function(e,ui){
+//			console.log($(this).attr("id"));
+//			var _this =this;
+//			iid = setInterval(function(){
+//              doSend(JSON.stringify({id:$(ui.helper).attr("id"),offset:ui.position}));
+//			},250)
+//		},
+//		stop:function(e,ui){
+//			console.log("stopped");
+//			clearInterval(iid);
+//		},
+        drag:function(e,ui){
+            doSend(JSON.stringify({id:$(ui.helper).attr("id"),offset:ui.position}));
+        }
 	});
-    $( ".piece" ).droppable({
-      drop: function( event, ui ) {
-        console.log("dropped!");
-          
-      }
-    });
+//    $( ".piece" ).droppable({
+//      drop: function( event, ui ) {
+//        console.log("dropped!");
+
+//      }
+//    });
 
 });

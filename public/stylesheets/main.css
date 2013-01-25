@@ -5,6 +5,7 @@ body{
 #checkers{
 	width: 850px;
 	margin: 10px auto;
+    position: relative;
 }
 .cell{
 	border:1px solid;
