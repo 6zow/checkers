@@ -11,18 +11,27 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
 	websocket.onerror = function(evt) { onError(evt) }; } 
 	function onOpen(evt) { writeToScreen("CONNECTED"); doSend("WebSocket rocks"); }
 	function onClose(evt) { writeToScreen("DISCONNECTED"); } 
-	function onMessage(evt) { writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>'); websocket.close(); }
+	function onMessage(evt) { writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>'); }
 	function onError(evt) { writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data); }
 	function doSend(message) { writeToScreen("SENT: " + message);  websocket.send(message); }
 	function writeToScreen(message) { var pre = document.createElement("p"); pre.style.wordWrap = "break-word"; pre.innerHTML = message; output.appendChild(pre); }
 	//window.addEventListener("load", init, false);
 
-var cols = 0;
+var colNumber = 0,vRow=0, cols;
+var columns = ["A","B","C","D","E","F","G","H","I"];
+var bgr = "";
+var iid;
 
 $(document).ready(function(){
 
 	//$("#checkers").html("TEST");
 	$(".cell").each(function(index){
+		$(this).attr("id",columns[colNumber]+vRow);
+		if(index % 7 == 0){
+			vRow++;
+			colNumber = 0;
+		}
+
 		//console.log(index);
 		if(index % 8 == 0) cols = cols == 0 ? 1 : 0;
 		if(index % 2 == 0 && cols == 0){
@@ -69,7 +78,18 @@ $(document).ready(function(){
 
 
 	//add drag/drop
-	$( ".piece" ).draggable();
+	$( ".piece" ).draggable({
+		start:function(e,ui){
+			console.log($(this).attr("id"));
+			iid = setInterval(function(){
+				doSend({id:$(this).attr("id"),offset:$(this).offset()});
+			},250)
+		},
+		stop:function(e,ui){
+			console.log("stopped");
+			clearInterval(iid);
+		}
+	});
     $( ".piece" ).droppable({
       drop: function( event, ui ) {
         console.log("dropped!");
