@@ -11,7 +11,17 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
 	websocket.onerror = function(evt) { onError(evt) }; } 
 	function onOpen(evt) { writeToScreen("CONNECTED"); doSend("WebSocket rocks"); }
 	function onClose(evt) { writeToScreen("DISCONNECTED"); } 
-	function onMessage(evt) { writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>'); }
+	function onMessage(evt) {
+
+
+		writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+
+		var obj = JSON.parse(evt.data);
+		$("#"+obj.id).css("top",obj.offset.top);
+		$("#"+obj.id).css("left",obj.offset.left);
+
+
+	}
 	function onError(evt) { writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data); }
 	function doSend(message) { writeToScreen("SENT: " + message);  websocket.send(message); }
 	function writeToScreen(message) { var pre = document.createElement("p"); pre.style.wordWrap = "break-word"; pre.innerHTML = message; output.appendChild(pre); }
@@ -81,8 +91,9 @@ $(document).ready(function(){
 	$( ".piece" ).draggable({
 		start:function(e,ui){
 			console.log($(this).attr("id"));
+			var _this =this;
 			iid = setInterval(function(){
-				doSend({id:$(this).attr("id"),offset:$(this).offset()});
+				doSend(JSON.stringify({id:$(_this).attr("id"),offset:$(_this).offset()}));
 			},250)
 		},
 		stop:function(e,ui){
