@@ -1,4 +1,4 @@
-var wsUri = "ws://echo.websocket.org/";
+var wsUri = "ws://172.24.38.8:9000/sockets";
 var output;
 
 
