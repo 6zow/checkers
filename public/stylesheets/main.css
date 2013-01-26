@@ -3,18 +3,39 @@ body{
 	padding:20px;
 }
 #checkers{
-	width: 850px;
+	width: 400px;
 	margin: 10px auto;
     position: relative;
 }
 .cell{
 	border:1px solid;
-	width: 100px;
-	height:100px;
+	width: 46px;
+	height: 46px;
 	margin:1px;
 	float:left;
 }
+.piece{
+    width:50px;
+    height:50px;
+    background-image:url("/assets/images/checkers.png");
+    background-repeat: no-repeat;
+    position:absolute;
+    background-size: 100px 50px;
+    z-index:1;
+}
+.red{
+    background-position:0 0;
+}
+.blk{
+    background-position:-50px 0;
+}
 #output {
-    height: 800px;
+    height: 300px;
+    overflow: scroll;
+    clear: both;
+}
+#messages {
+    padding-left: 20px;
+    height: 400px;
     overflow: scroll;
 }

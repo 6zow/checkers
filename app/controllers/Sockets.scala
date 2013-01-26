@@ -59,25 +59,41 @@ object Sockets {
   var users = List[User]()
   var queues = Map[User, BlockingQueue[JsValue]]()
 
-  var board = Map[String, Point]()
+  var board = {
+    val seq = for {
+      u <- 0 to 1
+      p <- 0 to 11
+    } yield (s"p${u + 1}-${p + 1}", (p / 3 * 2 + p % 3 % 2 + u) % 8 + 1, p % 3 + u % 2 * 5 + 1)
+    seq.map {
+      case (id, x, y) => id -> Point(x, y)
+    }.toMap
+  }
 
   def broadcast(event: JsValue) {
     println(s"broadcast: $event")
     for (user <- users) {
-      println(s"  to $user: $event")
-      queues(user).offer(event)
+      send(event)(user)
     }
+  }
+
+  def sendOther(event: JsValue)(implicit self: User) {
+    println(s"sendOther: $event")
+    for (user <- users) {
+      if (user != self) {
+        send(event)(user)
+      }
+    }
+  }
+
+  def send(event: JsValue)(implicit user: User) {
+    println(s"to $user: $event")
+    queues(user).offer(event)
   }
 
   def index = WebSocket.using[JsValue] {
     request =>
       @volatile
-      var user = User((1 to 1000).dropWhile(id => users.exists(_.id == id)).head)
-
-      def send(event: JsValue) {
-        println(s"to $user: $event")
-        queues(user).offer(event)
-      }
+      implicit var user = User((1 to 1000).dropWhile(id => users.exists(_.id == id)).head)
 
       users = user :: users
       queues = queues + (user -> new LinkedBlockingQueue[JsValue]())
@@ -87,7 +103,11 @@ object Sockets {
           println(s"Received: $s")
           (s \ "action").asOpt[String] match {
             case Some("join") =>
-              broadcast(Json.obj("msg" -> "welcome"))
+              send(Json.obj("msg" -> "welcome"))
+              sendOther(Json.obj("msg" -> s"$user joined"))
+              board.foreach {
+                case (id, pos) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> pos))
+              }
             case Some("moved") =>
               val p = (s \ "pos").as[Point]
               val id = (s \ "id").as[String]
