@@ -9,7 +9,7 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
 	websocket.onclose = function(evt) { onClose(evt) };
 	websocket.onmessage = function(evt) { onMessage(evt) };
 	websocket.onerror = function(evt) { onError(evt) }; } 
-	function onOpen(evt) { writeToScreen("CONNECTED"); doSend("WebSocket rocks"); }
+	function onOpen(evt) { writeToScreen("CONNECTED"); doSend(JSON.stringify({action: "join"})); }
 	function onClose(evt) { writeToScreen("DISCONNECTED"); } 
 	function onMessage(evt) {
 
@@ -17,8 +17,9 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
 		writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
 
 		var obj = JSON.parse(evt.data);
-		$("#"+obj.id).css("top",obj.offset.top);
-		$("#"+obj.id).css("left",obj.offset.left);
+        var offset = boardToScreen(obj.pos);
+		$("#"+obj.id).css("top", offset.top);
+		$("#"+obj.id).css("left", offset.left);
 
 
 	}
@@ -92,12 +93,13 @@ $(document).ready(function(){
 //              doSend(JSON.stringify({id:$(ui.helper).attr("id"),offset:ui.position}));
 //			},250)
 //		},
-//		stop:function(e,ui){
+		stop:function(e,ui){
 //			console.log("stopped");
 //			clearInterval(iid);
-//		},
+            doSend(JSON.stringify({action: "moved", id: $(ui.helper).attr("id"), pos: screenToBoard(ui.position)}));
+		},
         drag:function(e,ui){
-            doSend(JSON.stringify({id:$(ui.helper).attr("id"),offset:ui.position}));
+            doSend(JSON.stringify({action: "moving", id: $(ui.helper).attr("id"), pos: screenToBoard(ui.position)}));
         }
 	});
 //    $( ".piece" ).droppable({
@@ -108,3 +110,13 @@ $(document).ready(function(){
 //    });
 
 });
+
+function screenToBoard(offset) {
+    var x = offset.left / 104 + 1;
+    var y = 8 - offset.top / 104;
+    return {x: x, y: y};
+}
+
+function boardToScreen(pos) {
+    return {left: (pos.x - 1) * 104, top: (8 - pos.y) * 104};
+}
