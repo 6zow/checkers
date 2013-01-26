@@ -17,7 +17,7 @@ object Sockets {
   var users = List[User]()
   var queues = Map[User, BlockingQueue[JsValue]]()
 
-  val board = new Board()
+  val board = new Board(List(User(1), User(2)))
 
   def broadcast(event: JsValue) {
     println(s"broadcast: $event")
@@ -56,13 +56,22 @@ object Sockets {
               send(Json.obj("msg" -> "welcome"))
               sendOther(Json.obj("msg" -> s"$user joined"))
               board.pieces.foreach {
-                case (id, pos) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> pos))
+                case (id, piece) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> piece.position))
               }
+              send(Json.obj("movable" -> board.movablePieces))
             case Some("moved") =>
               val p = (s \ "pos").as[Point]
               val id = (s \ "id").as[String]
-              val pnew = p.constraint.getOrElse(board.pieces.getOrElse(id, p))
-              board.pieces = board.pieces + (id -> pnew)
+              val piece = board.pieces(id)
+              val newPiece = p.constraint.flatMap(piece.move(_))
+              val pnew = newPiece match {
+                case Some(newp) =>
+                  board.update(newp)
+                  broadcast(Json.obj("movable" -> board.movablePieces))
+                  newp.position
+                case None =>
+                  piece.position
+              }
               println(s"$p -> $pnew")
               broadcast(Json.obj("action" -> "moved", "id" -> id, "pos" -> pnew))
             case _ =>

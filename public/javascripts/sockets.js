@@ -21,13 +21,17 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
             var messages = $("#messages");
             messages.append("<p>" + obj.msg + "</p>");
             messages.scrollTop(messages.innerHeight());
+        } else if (obj.movable != undefined) {
+            $(".piece").draggable({disabled: true});
+            for (var i in obj.movable) {
+                makeDraggable($("#" + obj.movable[i]));
+            }
         } else {
             var offset = boardToScreen(obj.pos);
             var elt = $("#" + obj.id);
             if (elt.length == 0) {
                 $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'></div>");
                 elt = $("#" + obj.id);
-                makeDraggable(elt);
             }
             elt.css("top", offset.top);
             elt.css("left", offset.left);
@@ -75,7 +79,8 @@ function makeDraggable(piece) {
         },
         drag: function (e, ui) {
             doSend(JSON.stringify({action: "moving", id: $(ui.helper).attr("id"), pos: screenToBoard(ui.position)}));
-        }
+        },
+        disabled: false
     });
 }
 
