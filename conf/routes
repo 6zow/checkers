@@ -3,9 +3,10 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.index
+GET     /                           controllers.Application.index0
+GET     /:id                        controllers.Application.index(id: Int)
 
-GET     /sockets                    controllers.Sockets.index
+GET     /sockets/:id                controllers.Sockets.index(id: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

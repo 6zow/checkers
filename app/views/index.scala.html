@@ -1,8 +1,12 @@
-@(message: String)
+@(gameId: Int)
 
-@main("Welcome to Play 2.1") {
-    
+@main(s"Checkers - game $gameId") {
+
+    <script type="text/javascript">
+        gameId = @gameId;
+    </script>
     @checkers()
+    <div id="messages"></div>
     <div id="output"></div>
 
 }

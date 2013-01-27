@@ -1,11 +1,11 @@
-var wsUri = "ws://" + document.location.host + "/sockets";
+var wsUri = "ws://" + document.location.host + "/sockets/";
 var output;
 
 var moveMap;
 
 function init() { output = document.getElementById("output"); testWebSocket(); }
 
-function testWebSocket() { websocket = new WebSocket(wsUri);
+function testWebSocket() { websocket = new WebSocket(wsUri + gameId);
 	websocket.onopen = function(evt) { onOpen(evt) };
 	websocket.onclose = function(evt) { onClose(evt) };
 	websocket.onmessage = function(evt) { onMessage(evt) };

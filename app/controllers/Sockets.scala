@@ -9,7 +9,8 @@ import java.util.concurrent.{LinkedBlockingQueue, BlockingQueue}
 import models.{User, Point}
 import models.checkers.Board
 
-class Game() {
+class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
+
   import Point.PointFormat
 
   @volatile
@@ -59,11 +60,16 @@ class Game() {
 
   def processMessage(s: JsValue)(implicit user: User) {
     println(s"Received: $s")
-    def movable(user: User) =
-      board.movablePieces.filter(_.user == user).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
+    def movable(user: User) = {
+      if (allUsersEqual) {
+        board.movablePieces.filter(_.user == board.activeUser).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
+      } else {
+        board.movablePieces.filter(_.user == user).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
+      }
+    }
     (s \ "action").asOpt[String] match {
       case Some("join") =>
-        send(Json.obj("msg" -> s"welcome $user"))
+        send(Json.obj("msg" -> s"Welcome $user to game $gameId"))
         sendOther(Json.obj("msg" -> s"$user joined"))
         board.pieces.foreach {
           case (id, piece) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> piece.position))
@@ -110,16 +116,14 @@ class Game() {
 }
 
 object Sockets {
-  val game = new Game
+  val games = Map(1 -> new Game(1), 0 -> new Game(0, allUsersEqual = true))
 
-  def index = WebSocket.using[JsValue] {
+  def index(gameId: Int) = WebSocket.using[JsValue] {
     request =>
+      val game = games(gameId)
       implicit val user: User = game.connectUser
       // Log events to the console
-      val in = Iteratee.foreach[JsValue] {
-        s =>
-          game.processMessage(s)
-      }.mapDone {
+      val in = Iteratee.foreach[JsValue](game.processMessage(_)).mapDone {
         _ =>
           game.disconnectUser
       }
