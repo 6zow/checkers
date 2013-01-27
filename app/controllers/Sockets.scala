@@ -20,9 +20,14 @@ object Sockets {
   val board = new Board(List(User(1), User(2)))
 
   def broadcast(event: JsValue) {
-    println(s"broadcast: $event")
     for (user <- users) {
       send(event)(user)
+    }
+  }
+
+  def sendAll(event: User => JsValue) {
+    for (user <- users) {
+      send(event(user))(user)
     }
   }
 
@@ -40,6 +45,8 @@ object Sockets {
     queues(user).offer(event)
   }
 
+  def boardRef(p: Point) = (p.x + Char.char2int('A') - 1).toChar + "" + p.y.toInt
+
   def index = WebSocket.using[JsValue] {
     request =>
       @volatile
@@ -51,14 +58,16 @@ object Sockets {
       val in = Iteratee.foreach[JsValue] {
         s =>
           println(s"Received: $s")
+          def movable(user: User) =
+            board.movablePieces.filter(_.user == user).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
           (s \ "action").asOpt[String] match {
             case Some("join") =>
-              send(Json.obj("msg" -> "welcome"))
+              send(Json.obj("msg" -> s"welcome $user"))
               sendOther(Json.obj("msg" -> s"$user joined"))
               board.pieces.foreach {
                 case (id, piece) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> piece.position))
               }
-              send(Json.obj("movable" -> board.movablePieces))
+              send(Json.obj("movable" -> Json.toJson(movable(user))))
             case Some("moved") =>
               val p = (s \ "pos").as[Point]
               val id = (s \ "id").as[String]
@@ -66,8 +75,8 @@ object Sockets {
               val newPiece = p.constraint.flatMap(piece.move(_))
               val pnew = newPiece match {
                 case Some(newp) =>
-                  board.update(newp)
-                  broadcast(Json.obj("movable" -> board.movablePieces))
+                  board.update(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id)))
+                  sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
                   newp.position
                 case None =>
                   piece.position

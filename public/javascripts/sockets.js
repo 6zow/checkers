@@ -1,6 +1,7 @@
 var wsUri = "ws://" + document.location.host + "/sockets";
 var output;
 
+var moveMap;
 
 function init() { output = document.getElementById("output"); testWebSocket(); }
 
@@ -22,15 +23,19 @@ function testWebSocket() { websocket = new WebSocket(wsUri);
             messages.append("<p>" + obj.msg + "</p>");
             messages.scrollTop(messages.innerHeight());
         } else if (obj.movable != undefined) {
+            moveMap = obj.movable;
             $(".piece").draggable({disabled: true});
             for (var i in obj.movable) {
-                makeDraggable($("#" + obj.movable[i]));
+                makeDraggable($("#" + i));
             }
         } else {
+            if (obj.pos == undefined) {
+                obj.pos = {x: -100, y: -100};
+            }
             var offset = boardToScreen(obj.pos);
             var elt = $("#" + obj.id);
             if (elt.length == 0) {
-                $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'></div>");
+                $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'><div class='marker'></div></div>");
                 elt = $("#" + obj.id);
             }
             elt.css("top", offset.top);
@@ -57,8 +62,8 @@ $(document).ready(function(){
             vRow++;
         }
         $(this).attr("id", columns[colNumber] + (9 - vRow));
-		if((colNumber + vRow) % 2 == 1) {
-			$(this).css("background-color","#333333");
+		if((colNumber + vRow) % 2 == 0) {
+            $(this).addClass("blk");
 		}
         colNumber++;
 	});
@@ -74,13 +79,18 @@ $(document).ready(function(){
 function makeDraggable(piece) {
     //add drag/drop
     piece.draggable({
+        start: function (e, ui) {
+            moveMap[$(ui.helper).attr("id")].forEach(function(cell) { $("#" + cell).addClass("hl-cell") });
+        },
         stop: function (e, ui) {
+            $(".hl-cell").removeClass("hl-cell");
             doSend(JSON.stringify({action: "moved", id: $(ui.helper).attr("id"), pos: screenToBoard(ui.position)}));
         },
         drag: function (e, ui) {
             doSend(JSON.stringify({action: "moving", id: $(ui.helper).attr("id"), pos: screenToBoard(ui.position)}));
         },
-        disabled: false
+        disabled: false,
+        cursor: "move"
     });
 }
 

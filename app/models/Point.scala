@@ -19,6 +19,10 @@ case class Point(x: Double, y: Double) {
       Some(p)
     }
   }
+
+  def +(other: Point) = Point(x + other.x, y + other.y)
+
+  def *(d: Double) = Point(x * d, y * d)
 }
 
 object Point {
