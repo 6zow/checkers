@@ -36,10 +36,8 @@ class Board(val users: List[User]) {
     val seq = for {
       u <- 0 to 1
       p <- 0 to 11
-    } yield (s"p${u + 1}-${p + 1}", u, (p / 3 * 2 + p % 3 % 2 + u) % 8 + 1, p % 3 + u % 2 * 5 + 1)
-    seq.map {
-      case (id, u, x, y) => id -> Piece(users(u), id, Point(x, y))
-    }.toMap
+    } yield Piece(users(u), s"p${u + 1}-${p + 1}", Point((p / 3 * 2 + p % 3 % 2 + u) % 8 + 1, p % 3 + u % 2 * 5 + 1))
+    seq.map(piece => piece.id -> piece).toMap
   }
 
   var capturingPiece: Option[Piece] = None
@@ -47,8 +45,9 @@ class Board(val users: List[User]) {
   def pieces = _pieces
 
   def movablePieces = capturingPiece.map(Seq(_)).getOrElse {
-    if (capturingPieces.nonEmpty) {
-      capturingPieces
+    val capturing = capturingPieces
+    if (capturing.nonEmpty) {
+      capturing
     } else {
       pieces.values.filter(p => p.user == activeUser && availableMoves(p).nonEmpty)
     }
@@ -66,7 +65,8 @@ class Board(val users: List[User]) {
     val d = math.abs(p1.x - p2.x)
     for {
       i <- 1 to (d.toInt - 1)
-      piece <- pieceAt(p1 * (1 - i / d) + p2 * (i / d))
+      point <- (p1 * (1 - i / d) + p2 * (i / d)).constraint
+      piece <- pieceAt(point)
     } yield piece
   }
 
@@ -104,7 +104,6 @@ class Board(val users: List[User]) {
     }
 
     def capturingMove(pos: Point) = {
-      val maxDist = if (crowned) 100 else 2
       if (!pos.constraint.exists(_ == pos)) {
         // invalid position
         None
@@ -112,7 +111,7 @@ class Board(val users: List[User]) {
         // there is a piece in that position
         None
       } else if (math.abs(pos.y - position.y) == math.abs(pos.x - position.x)
-        && math.abs(pos.x - position.x) <= maxDist
+        && math.abs(pos.x - position.x) <= (if (crowned) 100 else 2)
         && pieceBetween(pos, position).filter(_.user != user).size == 1) {
         // capture
         Some(Piece(user, id, pos, crowned || pos.y == crownRow))
@@ -121,16 +120,16 @@ class Board(val users: List[User]) {
       }
     }
 
-    def movePositions: Iterable[Point] = {
+    lazy val movePositions: Iterable[Point] = {
       def streamInDir(dir: Point) = {
-        lazy val stream: Stream[Point] = position #:: stream.map(_ + dir)
+        lazy val stream: Stream[Point] = (position + dir) #:: stream.map(_ + dir)
         stream.takeWhile(_.constraint.nonEmpty)
       }
       if (crowned) {
         streamInDir(Point(-1, -1)) ++ streamInDir(Point(1, -1)) ++ streamInDir(Point(-1, 1)) ++ streamInDir(Point(1, 1))
       } else {
         List(Point(-1, forwardDir), Point(1, forwardDir), Point(-2, -2), Point(2, -2), Point(-2, 2), Point(2, 2)).
-          map(_ + position)
+          map(_ + position).filter(_.constraint.nonEmpty)
       }
     }
 
