@@ -79,7 +79,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         val p = (s \ "pos").as[Point]
         val id = (s \ "id").as[String]
         val piece = board.pieces(id)
-        val newPiece = p.constraint.flatMap(piece.move(_))
+        val newPiece = p.constraint.flatMap(piece.move(_)(board))
         val pnew = newPiece match {
           case Some(newp) =>
             board.update(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id)))
@@ -100,8 +100,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
     send(Json.obj())
   }
 
-  def getMessageForUser(implicit user: User): Future[Option[JsValue]] = {
-    Future[Option[JsValue]] {
+  def getMessageForUser(implicit user: User) = Future[Option[JsValue]] {
       println(s"awaiting for $user")
       queues(user).take match {
         case JsObject(Nil) => {
@@ -110,7 +109,6 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
           None
         }
         case msg => Some(msg)
-      }
     }
   }
 }
