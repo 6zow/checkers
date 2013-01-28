@@ -14,7 +14,9 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
   var users = List[User]()
   var queues = Map[User, BlockingQueue[JsValue]]()
 
-  var board = new Board(List(User(1), User(2)))
+  var boards = List(new Board(List(User(1), User(2))))
+
+  def board = boards.head
 
   def broadcast(event: JsValue) {
     for (user <- users) {
@@ -68,8 +70,8 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
       case Some("join") =>
         send(Json.obj("msg" -> s"Welcome $user to game $gameId"))
         sendOther(Json.obj("msg" -> s"$user joined"))
-        board.pieces.foreach {
-          case (id, piece) => send(Json.obj("action" -> "moved", "id" -> id, "pos" -> piece.position))
+        for (piece <- board.pieces.values) {
+          send(Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position))
         }
         send(Json.obj("movable" -> Json.toJson(movable(user))))
       case Some("moved") =>
@@ -79,7 +81,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         val newPiece = p.constraint.flatMap(piece.move(_)(board))
         val pnew = newPiece match {
           case Some(newp) =>
-            board = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id)))
+            boards = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
             newp.position
           case None =>
@@ -87,6 +89,12 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         }
         println(s"$p -> $pnew")
         broadcast(Json.obj("action" -> "moved", "id" -> id, "pos" -> pnew))
+      case Some("undo") =>
+        boards = if (boards.tail.isEmpty) boards else boards.tail
+        for (piece <- board.pieces.values) {
+          broadcast(Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position))
+        }
+        sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
       case _ =>
         broadcast(s)
     }

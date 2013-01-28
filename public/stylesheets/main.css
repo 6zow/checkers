@@ -43,6 +43,18 @@ body{
     overflow: scroll;
     clear: both;
 }
+
+#game-controls {
+    padding-left: 20px;
+}
+
+#undo {
+    background-image: url("/assets/images/undo.png");
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+}
+
 #messages {
     padding-left: 20px;
     height: 400px;

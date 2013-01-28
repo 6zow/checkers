@@ -68,10 +68,9 @@ $(document).ready(function(){
         colNumber++;
 	});
 
-	cell.bind("click",function(){
-		console.log("clicked");
-		doSend("click butteon");
-	});
+    $("#undo").bind("click", function () {
+        doSend(JSON.stringify({action: "undo"}));
+    });
 
 	init();
 });
