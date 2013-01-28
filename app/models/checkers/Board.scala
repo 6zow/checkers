@@ -5,46 +5,39 @@ import models.{User, Point}
 /**
  * @author Max Gorbunov
  */
-class Board(val users: List[User]) {
-  implicit val self = this
-
-  def update(piece: Piece, removeCallback: Piece => Unit) {
-    val oldPiece = _pieces(piece.id)
-    val remove = pieceBetween(oldPiece.position, piece.position).filter(_.user != piece.user)
-    _pieces = _pieces + (piece.id -> piece)
-    if (remove.isEmpty) {
-      // finished
-      changeActiveUser()
-    } else {
-      // captured
-      val p = remove.head
-      _pieces = _pieces - p.id
-      removeCallback(p)
-      if (capturingMoves(piece).nonEmpty) {
-        capturingPiece = Some(piece)
-      } else {
-        changeActiveUser()
-        capturingPiece = None
-      }
-    }
-  }
-
-  def changeActiveUser() {
-    activeUser = users.filter(_ != activeUser).head
-  }
-
-  var activeUser = users(0)
-  private var _pieces = {
+object Board {
+  def defaultPieces(users: List[User]) = {
     val seq = for {
       u <- 0 to 1
       p <- 0 to 11
     } yield Piece(users(u), s"p${u + 1}-${p + 1}", Point((p / 3 * 2 + p % 3 % 2 + u) % 8 + 1, p % 3 + u % 2 * 5 + 1))
     seq.map(piece => piece.id -> piece).toMap
   }
+}
 
-  var capturingPiece: Option[Piece] = None
+case class Board(users: List[User], activeUser: User, pieces: Map[String, Piece], capturingPiece: Option[Piece]) {
+  def this(users: List[User]) = this(users, users(0), Board.defaultPieces(users), None)
 
-  def pieces = _pieces
+  implicit val self = this
+
+  def updated(piece: Piece, removeCallback: Piece => Unit): Board = {
+    val oldPiece = pieces(piece.id)
+    val remove = pieceBetween(oldPiece.position, piece.position).filter(_.user != piece.user)
+    val _pieces = pieces + (piece.id -> piece)
+    if (remove.isEmpty) {
+      // finished
+      Board(users, users.filter(_ != activeUser).head, _pieces, None)
+    } else {
+      // captured
+      val p = remove.head
+      removeCallback(p)
+      if (capturingMoves(piece).nonEmpty) {
+        Board(users, activeUser, _pieces - p.id, Some(piece))
+      } else {
+        Board(users, users.filter(_ != activeUser).head, _pieces - p.id, None)
+      }
+    }
+  }
 
   def movablePieces = capturingPiece.map(Seq(_)).getOrElse {
     val capturing = capturingPieces
@@ -73,7 +66,7 @@ class Board(val users: List[User]) {
   }
 
   def pieceAt(position: Point): Option[Piece] = {
-    _pieces.values.filter(_.position == position).headOption
+    pieces.values.filter(_.position == position).headOption
   }
 }
 

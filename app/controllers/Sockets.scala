@@ -17,7 +17,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
   var users = List[User]()
   var queues = Map[User, BlockingQueue[JsValue]]()
 
-  val board = new Board(List(User(1), User(2)))
+  var board = new Board(List(User(1), User(2)))
 
   def broadcast(event: JsValue) {
     for (user <- users) {
@@ -82,7 +82,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         val newPiece = p.constraint.flatMap(piece.move(_)(board))
         val pnew = newPiece match {
           case Some(newp) =>
-            board.update(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id)))
+            board = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id)))
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
             newp.position
           case None =>
