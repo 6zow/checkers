@@ -35,11 +35,18 @@ function testWebSocket() { websocket = new WebSocket(wsUri + gameId);
             var offset = boardToScreen(obj.pos);
             var elt = $("#" + obj.id);
             if (elt.length == 0) {
-                $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'><div class='marker'></div></div>");
+                $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'><div class='marker'></div><div class='crown'></div></div>");
                 elt = $("#" + obj.id);
             }
             elt.css("top", offset.top);
             elt.css("left", offset.left);
+            if (obj.crowned != undefined) {
+                if (obj.crowned) {
+                    elt.addClass("crowned")
+                } else {
+                    elt.removeClass("crowned")
+                }
+            }
         }
 
 	}

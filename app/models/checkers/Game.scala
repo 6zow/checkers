@@ -66,12 +66,14 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         board.movablePieces.filter(_.user == user).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
       }
     }
+    def movedJson(piece: Piece) =
+      Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position, "crowned" -> piece.crowned)
     (s \ "action").asOpt[String] match {
       case Some("join") =>
         send(Json.obj("msg" -> s"Welcome $user to game $gameId"))
         sendOther(Json.obj("msg" -> s"$user joined"))
         for (piece <- board.pieces.values) {
-          send(Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position))
+          send(movedJson(piece))
         }
         send(Json.obj("movable" -> Json.toJson(movable(user))))
       case Some("moved") =>
@@ -88,14 +90,15 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
             piece.position
         }
         println(s"$p -> $pnew")
-        broadcast(Json.obj("action" -> "moved", "id" -> id, "pos" -> pnew))
+        broadcast(movedJson(board.pieces(id)))
       case Some("undo") =>
         boards = if (boards.tail.isEmpty) boards else boards.tail
         for (piece <- board.pieces.values) {
-          broadcast(Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position))
+          broadcast(movedJson(piece))
         }
         sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
       case _ =>
+        // TODO: don't broadcast everything without verification
         broadcast(s)
     }
   }

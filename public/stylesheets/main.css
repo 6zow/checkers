@@ -74,8 +74,22 @@ body{
     height: 10px;
     margin: 20px;
     background-color: #66BB66;
+    z-index: -10;
 }
 
 .piece.ui-draggable-disabled .marker {
     visibility: hidden;
+}
+
+.piece.crowned .crown {
+    background-image: url("/assets/images/crown.png");
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    top: 0;
+    left: 0;
+    margin: 13px 10px;
+    background-size: 30px;
+    background-repeat: no-repeat;
+    z-index: -20;
 }
