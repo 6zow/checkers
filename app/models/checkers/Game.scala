@@ -110,11 +110,10 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
           while (board.activeUser.id < 0) {
             Thread.sleep(1000)
             broadcast(Json.obj("msg" -> "Computer is thinking"))
-            val compPiece = board.movablePieces.head
-            val move = board.availableMoves(compPiece).head
-            boards = board.updated(compPiece.move(move).get, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
+            val (piece, _) = computeBestMove(board, board.activeUser)
+            boards = board.updated(piece, removed => broadcast(Json.obj("action" -> "removed", "id" -> removed.id))) :: boards
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
-            broadcast(movedJson(board.pieces(compPiece.id)))
+            broadcast(movedJson(board.pieces(piece.id)))
           }
         }
       case Some("undo") =>
@@ -135,6 +134,27 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
         freeMove = false
         sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
       case _ =>
+    }
+  }
+
+  def computeBestMove(implicit board: Board, user: User, depth: Int = 7): (Piece, Double) = {
+    if (depth == 0) {
+      val pieces = board.pieces.values
+      (pieces.head, pieces.count(_.user == user) - pieces.count(_.user != user))
+    } else {
+      val options = for {
+        piece <- board.movablePieces
+        move <- board.availableMoves(piece)
+        newPiece <- piece.move(move)
+        board1 = board.updated(newPiece, p => Unit)
+        (_, estimate) = computeBestMove(board1, user, depth - 1)
+      } yield (newPiece, estimate)
+      val getMax = board.activeUser == user
+      val best = options.foldLeft((Piece(user, "", Point(0, 0)), if (getMax) -1e100 else 1e100)) {
+        case ((p1, e1), (p2, e2)) =>
+          if (getMax && e1 > e2 || !getMax && e1 < e2) (p1, e1) else (p2, e2)
+      }
+      best
     }
   }
 
