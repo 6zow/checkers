@@ -54,7 +54,7 @@ case class Board(users: List[User], activeUser: User, pieces: Map[String, Piece]
     p => p.user == activeUser && capturingMoves(p).nonEmpty
   }
 
-  def availableMoves(piece: Piece) = piece.movePositions.flatMap(piece.move(_)).map(_.position) ++ capturingMoves(piece)
+  def availableMoves(piece: Piece) = piece.movePositions.flatMap(piece.move(_)).map(_.position)
 
   def pieceBetween(p1: Point, p2: Point) = {
     val d = math.abs(p1.x - p2.x)

@@ -79,6 +79,12 @@ $(document).ready(function(){
         doSend(JSON.stringify({action: "undo"}));
     });
 
+    $("#free-move").bind("click", function () {
+        var isOn = !$(this).hasClass("free-move-on");
+        doSend(JSON.stringify({freeMove: isOn}));
+        $(this).toggleClass("free-move-on");
+    });
+
 	init();
 });
 

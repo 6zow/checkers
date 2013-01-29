@@ -9,14 +9,19 @@ import concurrent.ExecutionContext.Implicits.global
 /**
  * @author Max Gorbunov
  */
-class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
+class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 0) {
   @volatile
   var users = List[User]()
   var queues = Map[User, BlockingQueue[JsValue]]()
 
-  var boards = List(new Board(List(User(1), User(2))))
+  var boards = computer match {
+    case 1 => List(new Board(List(User(-1), User(1))))
+    case 2 => List(new Board(List(User(1), User(-1))))
+    case 3 => List(new Board(List(User(-1), User(-2))))
+    case _ => List(new Board(List(User(1), User(2))))
+  }
 
-  def board = boards.head
+  implicit def board = boards.head
 
   def broadcast(event: JsValue) {
     for (user <- users) {
@@ -57,10 +62,15 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
     user
   }
 
+  var freeMove = false
+
   def processMessage(s: JsValue)(implicit user: User) {
     println(s"Received: $s")
     def movable(user: User) = {
-      if (allUsersEqual) {
+      if (freeMove) {
+        val x = (1 to 8).flatMap(i => (1 to 8).map(j => Point(i, j))).filter(board.pieceAt(_).isEmpty).map(boardRef)
+        board.pieces.values.map(_.id -> x).toMap
+      } else if (allUsersEqual) {
         board.movablePieces.filter(_.user == board.activeUser).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
       } else {
         board.movablePieces.filter(_.user == user).map(p => p.id -> board.availableMoves(p).map(boardRef)).toMap
@@ -80,17 +90,33 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
         val p = (s \ "pos").as[Point]
         val id = (s \ "id").as[String]
         val piece = board.pieces(id)
-        val newPiece = p.constraint.flatMap(piece.move(_)(board))
-        val pnew = newPiece match {
-          case Some(newp) =>
-            boards = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
+        if (freeMove) {
+          val newPiece = Piece(piece.user, id, p.constraint.filter(board.pieceAt(_).isEmpty).getOrElse(Point(0, if (users(0) == piece.user) 1 else 2)), piece.crowned)
+          boards = Board(board.users, board.activeUser, board.pieces - id + (id -> newPiece), board.capturingPiece) :: boards
+          broadcast(movedJson(newPiece))
+          sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
+        } else {
+          val newPiece = p.constraint.flatMap(piece.move(_)(board))
+          val pnew = newPiece match {
+            case Some(newp) =>
+              boards = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
+              sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
+              newp.position
+            case None =>
+              piece.position
+          }
+          println(s"$p -> $pnew")
+          broadcast(movedJson(board.pieces(id)))
+          while (board.activeUser.id < 0) {
+            Thread.sleep(1000)
+            broadcast(Json.obj("msg" -> "Computer is thinking"))
+            val compPiece = board.movablePieces.head
+            val move = board.availableMoves(compPiece).head
+            boards = board.updated(compPiece.move(move).get, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
-            newp.position
-          case None =>
-            piece.position
+            broadcast(movedJson(board.pieces(compPiece.id)))
+          }
         }
-        println(s"$p -> $pnew")
-        broadcast(movedJson(board.pieces(id)))
       case Some("undo") =>
         boards = if (boards.tail.isEmpty) boards else boards.tail
         for (piece <- board.pieces.values) {
@@ -100,6 +126,15 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false) {
       case _ =>
         // TODO: don't broadcast everything without verification
         broadcast(s)
+    }
+    (s \ "freeMove").asOpt[Boolean] match {
+      case Some(true) =>
+        freeMove = true
+        sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
+      case Some(false) =>
+        freeMove = false
+        sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
+      case _ =>
     }
   }
 
