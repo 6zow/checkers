@@ -31,10 +31,12 @@ case class Board(users: List[User], activeUser: User, pieces: Map[String, Piece]
       // captured
       val p = remove.head
       removeCallback(p)
-      if (capturingMoves(piece).nonEmpty) {
-        Board(users, activeUser, _pieces - p.id, Some(piece))
+      val pieces = _pieces - p.id
+      val newBoard = Board(users, activeUser, pieces, Some(piece))
+      if (newBoard.capturingMoves(piece).nonEmpty) {
+        newBoard
       } else {
-        Board(users, users.filter(_ != activeUser).head, _pieces - p.id, None)
+        Board(users, users.filter(_ != activeUser).head, pieces, None)
       }
     }
   }

@@ -43,7 +43,10 @@ case class Piece(user: User, id: String, position: Point, crowned: Boolean = fal
       None
     } else if (math.abs(pos.y - position.y) == math.abs(pos.x - position.x)
       && math.abs(pos.x - position.x) <= (if (crowned) 100 else 2)
-      && board.pieceBetween(pos, position).filter(_.user != user).size == 1) {
+      && {
+      val removePieces = board.pieceBetween(pos, position)
+      removePieces.size == 1 && removePieces.count(_.user != user) == 1
+    }) {
       // capture
       Some(Piece(user, id, pos, crowned || pos.y == crownRow))
     } else {
