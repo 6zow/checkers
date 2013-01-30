@@ -137,10 +137,14 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
     }
   }
 
+  def estimate(board: Board, user: User): (Piece, Double) = {
+    val pieces = board.pieces.values
+    (pieces.head, pieces.count(_.user == user) - pieces.count(_.user != user))
+  }
+
   def computeBestMove(implicit board: Board, user: User, depth: Int = 7): (Piece, Double) = {
     if (depth == 0) {
-      val pieces = board.pieces.values
-      (pieces.head, pieces.count(_.user == user) - pieces.count(_.user != user))
+      estimate(board, user)
     } else {
       val options = for {
         piece <- board.movablePieces
@@ -149,12 +153,16 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
         board1 = board.updated(newPiece, p => Unit)
         (_, estimate) = computeBestMove(board1, user, depth - 1)
       } yield (newPiece, estimate)
-      val getMax = board.activeUser == user
-      val best = options.foldLeft((Piece(user, "", Point(0, 0)), if (getMax) -1e100 else 1e100)) {
-        case ((p1, e1), (p2, e2)) =>
-          if (getMax && e1 > e2 || !getMax && e1 < e2) (p1, e1) else (p2, e2)
+      if (options.isEmpty) {
+        estimate(board, user)
+      } else {
+        val getMax = board.activeUser == user
+        val best = options.foldLeft((Piece(user, "", Point(0, 0)), if (getMax) -1e100 else 1e100)) {
+          case ((p1, e1), (p2, e2)) =>
+            if (getMax && e1 > e2 || !getMax && e1 < e2) (p1, e1) else (p2, e2)
+        }
+        best
       }
-      best
     }
   }
 
