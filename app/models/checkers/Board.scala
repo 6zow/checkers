@@ -56,7 +56,33 @@ case class Board(users: List[User], activeUser: User, pieces: Map[String, Piece]
     p => p.user == activeUser && capturingMoves(p).nonEmpty
   }
 
-  def availableMoves(piece: Piece) = piece.movePositions.flatMap(piece.move(_)).map(_.position)
+  def availableMoves(piece: Piece) = {
+    val possibleMoves = piece.movePositions.flatMap(piece.move(_))
+    if (possibleMoves.size <= 1) {
+      possibleMoves.map(_.position)
+    } else {
+      val movedAndRemoved = possibleMoves.map {
+        movedPiece => (movedPiece, pieceBetween(piece.position, movedPiece.position).headOption)
+      }
+      val removed = movedAndRemoved.map(_._2).toSet
+      // TODO: assert that removed does not contain Some and None simultaneously
+      val goodMoves = removed.flatMap {
+        r =>
+          val moves = movedAndRemoved.filter(_._2 == r).map(_._1)
+          if (moves.size <= 1 || r.isEmpty) {
+            moves
+          } else {
+            val captMoves = moves.filter(moved => this.updated(moved, _ => Unit).activeUser == piece.user)
+            if (captMoves.size > 0) {
+              captMoves
+            } else {
+              moves
+            }
+          }
+      }
+      goodMoves.map(_.position)
+    }
+  }
 
   def pieceBetween(p1: Point, p2: Point) = {
     val d = math.abs(p1.x - p2.x)
