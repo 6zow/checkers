@@ -108,9 +108,15 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
           println(s"$p -> $pnew")
           broadcast(movedJson(board.pieces(id)))
           while (board.activeUser.id < 0) {
-            Thread.sleep(1000)
             broadcast(Json.obj("msg" -> "Computer is thinking"))
-            val (piece, _) = computeBestMove(board, board.activeUser)
+            Thread.sleep(1000)
+            val moves = board.movablePieces.toStream.flatMap(p => board.availableMoves(p).map((p, _)))
+            val piece = if (moves.nonEmpty && moves.tail.isEmpty) {
+              val (p, pos) = moves.head
+              p.move(pos).get
+            } else {
+              computeBestMove(board, board.activeUser)._1
+            }
             boards = board.updated(piece, removed => broadcast(Json.obj("action" -> "removed", "id" -> removed.id))) :: boards
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
             broadcast(movedJson(board.pieces(piece.id)))
