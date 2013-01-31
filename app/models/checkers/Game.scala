@@ -78,6 +78,8 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
     }
     def movedJson(piece: Piece) =
       Json.obj("action" -> "moved", "id" -> piece.id, "pos" -> piece.position, "crowned" -> piece.crowned)
+    def capturedJson(piece: Piece) =
+      Json.obj("action" -> (if (piece.status == Dead) "died" else "removed"), "id" -> piece.id)
     (s \ "action").asOpt[String] match {
       case Some("join") =>
         send(Json.obj("msg" -> s"Welcome $user to game $gameId"))
@@ -85,6 +87,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
         for (piece <- board.pieces.values) {
           send(movedJson(piece))
         }
+        board.pieces.values.filter(_.status != Alive).foreach(p => send(capturedJson(p)))
         send(Json.obj("movable" -> Json.toJson(movable(user))))
       case Some("moved") =>
         val p = (s \ "pos").as[Point]
@@ -99,7 +102,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
           val newPiece = p.constraint.flatMap(piece.move(_)(board))
           val pnew = newPiece match {
             case Some(newp) =>
-              boards = board.updated(newp, piece => broadcast(Json.obj("action" -> "removed", "id" -> piece.id))) :: boards
+              boards = board.updated(newp, piece => broadcast(capturedJson(piece))) :: boards
               sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
               newp.position
             case None =>
@@ -117,7 +120,7 @@ class Game(val gameId: Int, val allUsersEqual: Boolean = false, computer: Int = 
             } else {
               computeBestMove(board, board.activeUser)._1
             }
-            boards = board.updated(piece, removed => broadcast(Json.obj("action" -> "removed", "id" -> removed.id))) :: boards
+            boards = board.updated(piece, removed => broadcast(capturedJson(removed))) :: boards
             sendAll(user => Json.obj("movable" -> Json.toJson(movable(user))))
             broadcast(movedJson(board.pieces(piece.id)))
           }

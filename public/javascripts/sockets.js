@@ -9,9 +9,9 @@ function testWebSocket() { websocket = new WebSocket(wsUri + gameId);
 	websocket.onopen = function(evt) { onOpen(evt) };
 	websocket.onclose = function(evt) { onClose(evt) };
 	websocket.onmessage = function(evt) { onMessage(evt) };
-	websocket.onerror = function(evt) { onError(evt) }; } 
+	websocket.onerror = function(evt) { onError(evt) }; }
 	function onOpen(evt) { writeToScreen("CONNECTED"); doSend(JSON.stringify({action: "join"})); }
-	function onClose(evt) { writeToScreen("DISCONNECTED"); } 
+	function onClose(evt) { writeToScreen("DISCONNECTED"); }
 	function onMessage(evt) {
 
 
@@ -29,15 +29,20 @@ function testWebSocket() { websocket = new WebSocket(wsUri + gameId);
                 makeDraggable($("#" + i));
             }
         } else {
-            if (obj.pos == undefined) {
-                obj.pos = {x: -100, y: -100};
-            }
-            var offset = boardToScreen(obj.pos);
             var elt = $("#" + obj.id);
             if (elt.length == 0) {
                 $("#checkers").append("<div id='" + obj.id + "' class='piece " + (obj.id.substr(1, 1) == "1" ? "red" : "blk") + "'><div class='marker'></div><div class='crown'></div></div>");
                 elt = $("#" + obj.id);
             }
+            elt.removeClass("dead");
+            if (obj.pos == undefined) {
+                if (obj.action == "died") {
+                    elt.addClass("dead");
+                } else {
+                    obj.pos = {x: -100, y: -100};
+                }
+            }
+            var offset = boardToScreen(obj.pos);
             elt.css("top", offset.top);
             elt.css("left", offset.left);
             if (obj.crowned != undefined) {

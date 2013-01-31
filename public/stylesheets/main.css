@@ -99,3 +99,7 @@ body{
     background-repeat: no-repeat;
     z-index: -20;
 }
+
+.piece.dead {
+    opacity: 0.5;
+}

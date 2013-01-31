@@ -22,21 +22,26 @@ case class Board(users: List[User], activeUser: User, pieces: Map[String, Piece]
 
   def updated(piece: Piece, removeCallback: Piece => Unit): Board = {
     val oldPiece = pieces(piece.id)
-    val remove = pieceBetween(oldPiece.position, piece.position).filter(_.user != piece.user)
+    val captured = pieceBetween(oldPiece.position, piece.position).filter(_.user != piece.user)
     val _pieces = pieces + (piece.id -> piece)
-    if (remove.isEmpty) {
+    def reportCaptured(pieces: Map[String, Piece], transform: Piece => Piece = {p => p}) {
+      pieces.values.filter(_.status != Alive).foreach(p => removeCallback(transform(p)))
+    }
+    if (captured.isEmpty) {
       // finished
-      Board(users, users.filter(_ != activeUser).head, _pieces, None)
+      reportCaptured(_pieces, _.remove)
+      Board(users, users.filter(_ != activeUser).head, _pieces.filter(_._2.status == Alive), None)
     } else {
       // captured
-      val p = remove.head
-      removeCallback(p)
-      val pieces = _pieces - p.id
+      val p = captured.head
+      val pieces = _pieces + (p.id -> p.die)
       val newBoard = Board(users, activeUser, pieces, Some(piece))
       if (newBoard.capturingMoves(piece).nonEmpty) {
+        reportCaptured(pieces)
         newBoard
       } else {
-        Board(users, users.filter(_ != activeUser).head, pieces, None)
+        reportCaptured(pieces, _.remove)
+        Board(users, users.filter(_ != activeUser).head, pieces.filter(_._2.status == Alive), None)
       }
     }
   }

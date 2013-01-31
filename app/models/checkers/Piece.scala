@@ -5,7 +5,11 @@ import models.{Point, User}
 /**
  * @author Max Gorbunov
  */
-case class Piece(user: User, id: String, position: Point, crowned: Boolean = false) {
+case class Piece(user: User, id: String, position: Point, crowned: Boolean = false, status: PieceStatus = Alive) {
+  def die = Piece(user, id, position, crowned, status = Dead)
+
+  def remove = Piece(user, id, position, crowned, status = Removed)
+
   def move(pos: Point)(implicit board: Board) = simpleMove(pos).orElse(capturingMove(pos))
 
   def simpleMove(pos: Point)(implicit board: Board) = {
@@ -45,7 +49,7 @@ case class Piece(user: User, id: String, position: Point, crowned: Boolean = fal
       && math.abs(pos.x - position.x) <= (if (crowned) 100 else 2)
       && {
       val removePieces = board.pieceBetween(pos, position)
-      removePieces.size == 1 && removePieces.count(_.user != user) == 1
+      removePieces.size == 1 && removePieces.head.user != user && removePieces.head.status == Alive
     }) {
       // capture
       Some(Piece(user, id, pos, crowned || pos.y == crownRow))
@@ -71,3 +75,11 @@ case class Piece(user: User, id: String, position: Point, crowned: Boolean = fal
 
   def crownRow(implicit board: Board) = if (board.users(0) == user) 8 else 1
 }
+
+sealed trait PieceStatus
+
+case object Alive extends PieceStatus
+
+case object Dead extends PieceStatus
+
+case object Removed extends PieceStatus
